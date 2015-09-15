@@ -4,7 +4,6 @@ import java.util.logging.Logger;
 
 import javax.naming.InitialContext;
 import javax.transaction.TransactionManager;
-import javax.ws.rs.DefaultValue;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.QueryParam;
@@ -12,7 +11,6 @@ import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
-import org.jbpm.process.instance.timer.TimerInstance;
 import org.jbpm.workflow.instance.WorkflowProcessInstance;
 import org.jbpm.workflow.instance.node.TimerNodeInstance;
 import org.kie.api.runtime.KieSession;
@@ -26,21 +24,13 @@ import org.kie.internal.runtime.manager.context.EmptyContext;
 public class TimerRestoreResource {
 	
 	Logger logger = Logger.getLogger(getClass().getName());
-	
-	
-	
+
 	@POST
 	public void restore(@QueryParam("deploymentId") String deploymentId,
-						@QueryParam("piid") long piid, 
-						@QueryParam("cron") String cronExpression, 
-						@QueryParam("delay") long delay,  
-						@QueryParam("period") long period, 
-						@QueryParam("stopAfter") int stopAfter,
-						@DefaultValue("false") @QueryParam("triggered") boolean triggered) throws Exception {
+						@QueryParam("piid") long piid) throws Exception {
 	    TransactionManager tm = (TransactionManager) new InitialContext().lookup("java:jboss/TransactionManager");
 		KieSession kSession = getKieSession(deploymentId);
 		TimerNodeInstance oldTimerInstance = null;
-		TimerInstance newTimerInstance = new TimerInstance();
 		tm.begin();
 		WorkflowProcessInstance pi = (WorkflowProcessInstance)kSession.getProcessInstance(piid);
 		for(NodeInstance n: pi.getNodeInstances()) {
@@ -50,20 +40,7 @@ public class TimerRestoreResource {
 		if(oldTimerInstance == null) {
 			throw new WebApplicationException(Response.status(Status.BAD_REQUEST).entity("Process NOT stopped on a TimerNodeInstance").build());
 		}
-		if(triggered) {
-			// WORKING PERFECTLY
-			logger.info("Setting timer as triggered for process instance " + piid);
-			oldTimerInstance.triggerCompleted(true);
-		} else {
-			// NOT FULLY TESTED! NOT WORKING PERFECTLY
-			logger.info("Restoring timer for process instance " + piid);
-			newTimerInstance.setId(oldTimerInstance.getId());
-			newTimerInstance.setTimerId(oldTimerInstance.getTimerId());
-			newTimerInstance.setCronExpression(cronExpression);
-			newTimerInstance.setPeriod(period);
-			newTimerInstance.setRepeatLimit(stopAfter);
-			pi.signalEvent("timerTriggered", newTimerInstance);
-		}
+		logger.info("Setting timer as triggered for process instance " + piid);
 		tm.commit();
 	}
 
