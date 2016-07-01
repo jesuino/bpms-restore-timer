@@ -1,0 +1,25 @@
+<html>
+
+<head>
+<title>BPM Suite: Restoring Processes utilities</title>
+</head>
+<body>
+	<h2>Restoring processes stopped on a timer</h2>
+
+	<div>
+		<em>Allows you to restore process that are waiting a
+			timer completion. You can set new values for the timer, restore it
+			with the old values or simply skip it.</em>
+	</div>
+	<hr />
+	<h4>Skip timer</h4>
+	<em>If the given process instance ID is stopped on a timer and you
+		want to simply skip it</em> <br />
+	<br />
+	<form action="rest/timer/mark-as-triggered" method="post">
+		<div style="width: 200px; float: left;">Deployment ID:</div> <input type="text" name="deploymentId" /> <br />
+		<div style="width: 200px; float: left;">Process Instance ID: </div><input type="text" name="piid" /> <br />
+		<input type="submit" />
+	</form>
+</body>
+</html>
