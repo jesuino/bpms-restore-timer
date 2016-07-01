@@ -2,8 +2,8 @@ package com.redhat.gss.brms.restore;
 
 import java.util.logging.Logger;
 
-import javax.naming.InitialContext;
-import javax.transaction.TransactionManager;
+import javax.ejb.EJB;
+import javax.ejb.Stateless;
 import javax.ws.rs.FormParam;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
@@ -12,16 +12,9 @@ import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
-import org.jbpm.workflow.instance.WorkflowProcessInstance;
-import org.jbpm.workflow.instance.node.TimerNodeInstance;
-import org.kie.api.runtime.KieSession;
-import org.kie.api.runtime.manager.RuntimeEngine;
-import org.kie.api.runtime.manager.RuntimeManager;
-import org.kie.api.runtime.process.NodeInstance;
 import org.kie.internal.runtime.conf.RuntimeStrategy;
-import org.kie.internal.runtime.manager.RuntimeManagerRegistry;
-import org.kie.internal.runtime.manager.context.EmptyContext;
-import org.kie.internal.runtime.manager.context.ProcessInstanceIdContext;
+
+import com.redhat.gss.brms.service.TimerRestoreService;
 
 /**
  * 
@@ -34,7 +27,11 @@ import org.kie.internal.runtime.manager.context.ProcessInstanceIdContext;
  *
  */
 @Path("timer")
+@Stateless
 public class TimerRestoreResource {
+	
+	@EJB
+	TimerRestoreService timerRestoreService;
 
 	Logger logger = Logger.getLogger(getClass().getName());
 
@@ -47,21 +44,20 @@ public class TimerRestoreResource {
 	// tested and working
 	public Response setAsTriggered(
 			@FormParam("deploymentId") String deploymentId,
-			@FormParam("piid") long piid) throws Exception {
-		TransactionManager tm = (TransactionManager) InitialContext.doLookup("java:jboss/TransactionManager");
-		tm.begin();
-		RuntimeEngine runtimeEngine = getRuntimeEngine(deploymentId, piid);
-		KieSession kSession = runtimeEngine.getKieSession();
-		WorkflowProcessInstance pi = (WorkflowProcessInstance) kSession
-				.getProcessInstance(piid);
-		TimerNodeInstance oldTimerInstance = getTimerInstance(pi);
-		oldTimerInstance.triggerCompleted(true);
-		dispose(deploymentId, runtimeEngine);
-		logger.info("Setting timer as triggered for process instance " + piid);
-		tm.commit();
-		return Response.ok(
-				"Timer from piid " + piid + " of deployment " + deploymentId
-						+ " succesfull marked as triggered").build();
+			@FormParam("piid") long piid) {
+		String responseMsg;
+		try {
+			logger.info("Setting timer as triggered for process instance "
+					+ piid);
+			timerRestoreService.setAsTriggered(deploymentId, piid);
+			responseMsg = "Timer from piid " + piid + " of deployment "
+					+ deploymentId + " succesfull marked as triggered";
+			logger.info(responseMsg);
+			return Response.ok(responseMsg).build();
+		} catch (Exception e) {
+			e.printStackTrace();
+			throw new RuntimeException(e);
+		}
 
 	}
 
@@ -77,12 +73,8 @@ public class TimerRestoreResource {
 					.format("Attempt to update timer %s from process instance id %d with parameters: (delay = %d, period= %d, repeatLimit = %d)",
 							timerName, piid, delay, period, repeatLimit);
 			logger.info(msg);
-			org.jbpm.process.instance.command.UpdateTimerCommand cmd = new org.jbpm.process.instance.command.UpdateTimerCommand(
-					piid, timerName, delay, period, repeatLimit);
-			RuntimeEngine runtimeEngine = getRuntimeEngine(deploymentId, piid);
-			KieSession kSession = runtimeEngine.getKieSession();
-			kSession.execute(cmd);
-			dispose(deploymentId, runtimeEngine);
+			timerRestoreService.updateTimerNode(piid, deploymentId, timerName, delay, period,
+					repeatLimit);
 			return Response.ok("Timer successfully updated").build();
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -97,42 +89,6 @@ public class TimerRestoreResource {
 	public Response update(@FormParam("piid") Long piid,
 			@FormParam("deploymentId") String deploymentId) {
 		return Response.ok("Timer successfully restored").build();
-
 	}
 
-	private TimerNodeInstance getTimerInstance(WorkflowProcessInstance pi) {
-		// this does not seem to be the best way to achieve this - better modify
-		// in future
-		TimerNodeInstance oldTimerInstance = null;
-		for (NodeInstance n : pi.getNodeInstances()) {
-			if (n instanceof TimerNodeInstance)
-				oldTimerInstance = (TimerNodeInstance) n;
-		}
-		if (oldTimerInstance == null) {
-			throw new WebApplicationException(Response
-					.status(Status.BAD_REQUEST)
-					.entity("Process NOT stopped on a TimerNodeInstance")
-					.build());
-		}
-		return oldTimerInstance;
-	}
-
-	public RuntimeEngine getRuntimeEngine(String deploymentId, Long piid) {
-		RuntimeManager runtimeManager = RuntimeManagerRegistry.get().getManager(deploymentId);
-		RuntimeEngine runtimeEngine = null;
-		if (strategy == RuntimeStrategy.PER_PROCESS_INSTANCE) {
-			runtimeEngine = runtimeManager
-					.getRuntimeEngine(ProcessInstanceIdContext.get(piid));
-		} else {
-			runtimeEngine = runtimeManager.getRuntimeEngine(EmptyContext.get());
-		}
-		return runtimeEngine;
-	}
-
-	public void dispose(String deploymentId, RuntimeEngine runtimeEngine) {
-			RuntimeManager runtimeManager = RuntimeManagerRegistry.get().getManager(deploymentId);
-		if (strategy!= null && strategy == RuntimeStrategy.SINGLETON) {
-			runtimeManager.disposeRuntimeEngine(runtimeEngine);
-		}
-	}
 }

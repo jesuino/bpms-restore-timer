@@ -2,24 +2,51 @@
 
 <head>
 <title>BPM Suite: Restoring Processes utilities</title>
+<style type="text/css">
+.label {
+	width: 200px;
+	float: left;
+}
+</style>
+
 </head>
 <body>
 	<h2>Restoring processes stopped on a timer</h2>
 
 	<div>
-		<em>Allows you to restore process that are waiting a
-			timer completion. You can set new values for the timer, restore it
-			with the old values or simply skip it.</em>
+		<em>Allows you to restore process that are waiting a timer
+			completion. You can set new values for the timer, restore it with the
+			old values or simply skip it.</em>
 	</div>
 	<hr />
 	<h4>Skip timer</h4>
 	<em>If the given process instance ID is stopped on a timer and you
-		want to simply skip it</em> <br />
+		want to simply skip it</em>
+	<br />
 	<br />
 	<form action="rest/timer/mark-as-triggered" method="post">
-		<div style="width: 200px; float: left;">Deployment ID:</div> <input type="text" name="deploymentId" /> <br />
-		<div style="width: 200px; float: left;">Process Instance ID: </div><input type="text" name="piid" /> <br />
-		<input type="submit" />
+		<div class="label">Deployment ID:</div>
+		<input type="text" name="deploymentId" /> <br />
+		<div class="label">Process Instance ID:</div>
+		<input type="text" name="piid" /> <br /> <input type="submit" />
+	</form>
+	<h4>Update timer</h4>
+	<em>Updates a timer values</em>
+	<br />
+	<br />
+	<form action="rest/timer/update" method="post">
+		<div class="label">Deployment ID:</div>
+		<input type="text" name="deploymentId" /> <br />
+		<div class="label">Process Instance ID:</div>
+		<input type="text" name="piid" /> <br />
+		<div class="label">Timer name</div>
+		<input type="text" name="timerName" /> <br />
+		<div class="label">Delay</div>
+		<input type="text" name="delay" value="0"/> <br />
+		<div class="label">Period</div>
+		<input type="text" name="period" value="0"/> <br />
+		<div class="label">Repeat limit</div>
+        <input type="text" name="repeatLimit" value="0"/> <br />  <input type="submit" />
 	</form>
 </body>
 </html>
