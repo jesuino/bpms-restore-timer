@@ -38,12 +38,15 @@ public class TimerRestoreService {
 		dispose(deploymentId, runtimeEngine);
 	}
 
-	public void updateTimerNode(Long piid, String deploymentId,
-			String timerName, long delay, long period, int repeatLimit) {
+	public void updateTimerNode(Long piid, String deploymentId, long delay,
+			long period, int repeatLimit) {
 		RuntimeEngine runtimeEngine = getRuntimeEngine(deploymentId, piid);
 		KieSession kSession = runtimeEngine.getKieSession();
-		UpdateTimerCommand cmd = new UpdateTimerCommand(piid, timerName, delay,
-				period, repeatLimit);
+		WorkflowProcessInstance pi = (WorkflowProcessInstance) kSession
+				.getProcessInstance(piid);
+		TimerNodeInstance timerInstance = getTimerInstance(pi);
+		UpdateTimerCommand cmd = new UpdateTimerCommand(piid, timerInstance
+				.getTimerNode().getName(), delay, period, repeatLimit);
 		kSession.execute(cmd);
 		dispose(deploymentId, runtimeEngine);
 	}

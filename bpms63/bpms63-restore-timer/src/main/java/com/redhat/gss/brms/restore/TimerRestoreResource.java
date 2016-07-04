@@ -65,15 +65,13 @@ public class TimerRestoreResource {
 	@Path("update")
 	public Response update(@FormParam("piid") Long piid,
 			@FormParam("deploymentId") String deploymentId,
-			@FormParam("timerName") String timerName,
 			@FormParam("delay") long delay, @FormParam("period") long period,
 			@FormParam("repeatLimit") int repeatLimit) {
 		try {
 			String msg = String
-					.format("Attempt to update timer %s from process instance id %d with parameters: (delay = %d, period= %d, repeatLimit = %d)",
-							timerName, piid, delay, period, repeatLimit);
+					.format("Attempt to update timer from process instance id %d with parameters: (delay = %d, period= %d, repeatLimit = %d)", piid, delay, period, repeatLimit);
 			logger.info(msg);
-			timerRestoreService.updateTimerNode(piid, deploymentId, timerName, delay, period,
+			timerRestoreService.updateTimerNode(piid, deploymentId, delay, period,
 					repeatLimit);
 			return Response.ok("Timer successfully updated").build();
 		} catch (Exception e) {
