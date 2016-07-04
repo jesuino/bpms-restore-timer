@@ -1,11 +1,15 @@
 package com.redhat.gss.brms.service;
 
+import javax.ejb.EJB;
 import javax.ejb.Stateless;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
+import org.jbpm.kie.services.impl.KModuleDeploymentUnit;
 import org.jbpm.process.instance.command.UpdateTimerCommand;
+import org.jbpm.services.api.model.DeploymentUnit;
+import org.jbpm.services.ejb.api.DeploymentServiceEJBLocal;
 import org.jbpm.workflow.instance.WorkflowProcessInstance;
 import org.jbpm.workflow.instance.node.TimerNodeInstance;
 import org.kie.api.runtime.KieSession;
@@ -13,12 +17,14 @@ import org.kie.api.runtime.manager.RuntimeEngine;
 import org.kie.api.runtime.manager.RuntimeManager;
 import org.kie.api.runtime.process.NodeInstance;
 import org.kie.internal.runtime.conf.RuntimeStrategy;
-import org.kie.internal.runtime.manager.RuntimeManagerRegistry;
 import org.kie.internal.runtime.manager.context.EmptyContext;
 import org.kie.internal.runtime.manager.context.ProcessInstanceIdContext;
 
 @Stateless
 public class TimerRestoreService {
+
+	@EJB
+	DeploymentServiceEJBLocal deploymentService;
 
 	private RuntimeStrategy strategy;
 
@@ -43,8 +49,6 @@ public class TimerRestoreService {
 	}
 
 	private TimerNodeInstance getTimerInstance(WorkflowProcessInstance pi) {
-		// this does not seem to be the best way to achieve this - better modify
-		// in future
 		TimerNodeInstance oldTimerInstance = null;
 		for (NodeInstance n : pi.getNodeInstances()) {
 			if (n instanceof TimerNodeInstance)
@@ -60,8 +64,7 @@ public class TimerRestoreService {
 	}
 
 	public RuntimeEngine getRuntimeEngine(String deploymentId, Long piid) {
-		RuntimeManager runtimeManager = RuntimeManagerRegistry.get()
-				.getManager(deploymentId);
+		RuntimeManager runtimeManager = getRuntimeManager(deploymentId);
 		RuntimeEngine runtimeEngine = null;
 		if (strategy == RuntimeStrategy.PER_PROCESS_INSTANCE) {
 			runtimeEngine = runtimeManager
@@ -73,11 +76,19 @@ public class TimerRestoreService {
 	}
 
 	public void dispose(String deploymentId, RuntimeEngine runtimeEngine) {
-		RuntimeManager runtimeManager = RuntimeManagerRegistry.get()
-				.getManager(deploymentId);
+		RuntimeManager runtimeManager = getRuntimeManager(deploymentId);
 		if (strategy != null && strategy == RuntimeStrategy.SINGLETON) {
 			runtimeManager.disposeRuntimeEngine(runtimeEngine);
 		}
 	}
 
+	private RuntimeManager getRuntimeManager(String deploymentId) {
+		if (!deploymentService.isDeployed(deploymentId)) {
+			String[] gav = deploymentId.split(":");
+			DeploymentUnit deploymentUnit = new KModuleDeploymentUnit(gav[0],
+					gav[1], gav[2]);
+			deploymentService.deploy(deploymentUnit);
+		}
+		return deploymentService.getRuntimeManager(deploymentId);
+	}
 }
