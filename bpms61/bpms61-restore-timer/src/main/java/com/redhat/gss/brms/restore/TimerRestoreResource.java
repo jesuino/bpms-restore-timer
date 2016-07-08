@@ -41,6 +41,7 @@ public class TimerRestoreResource {
 			throw new WebApplicationException(Response.status(Status.BAD_REQUEST).entity("Process NOT stopped on a TimerNodeInstance").build());
 		}
 		logger.info("Setting timer as triggered for process instance " + piid);
+		oldTimerInstance.triggerCompleted(true);
 		tm.commit();
 	}
 

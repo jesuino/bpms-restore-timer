@@ -14,6 +14,8 @@
 		<version.war.plugin>2.1.1</version.war.plugin>
 		<version.org.jboss.integration-platform>6.0.0.CR26-redhat-2</version.org.jboss.integration-platform>
 		<maven.compiler.target>1.6</maven.compiler.target>
+		      <version.jboss.maven.plugin>7.4.Final</version.jboss.maven.plugin>
+		
 		<maven.compiler.source>1.6</maven.compiler.source>
 	</properties>
 	<dependencyManagement>
