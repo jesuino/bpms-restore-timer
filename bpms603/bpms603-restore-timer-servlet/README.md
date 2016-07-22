@@ -8,7 +8,7 @@ Build it using `mvn clean package` and add deploy it to JBoss EAP running BPM Su
 
 It highly depends on Business central running on JBoss EAP.
 
-`$ curl -X POST 'http://localhost:8080/bpms603-restore-timer/rest/restore?deploymentId=example:proj:1.0&piid=10'`
+`curl -X POST 'http://localhost:8080/bpms603-restore-timer-servlet/rest/restore?deploymentId=com.redhat.gss:quartz_proj:1.0&piid=4'`
 
 It is also possible to update a running timer using the following call:
 
