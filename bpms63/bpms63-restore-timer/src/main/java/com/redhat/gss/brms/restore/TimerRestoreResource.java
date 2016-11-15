@@ -29,7 +29,7 @@ import com.redhat.gss.brms.service.TimerRestoreService;
 @Path("timer")
 @Stateless
 public class TimerRestoreResource {
-	
+
 	@EJB
 	TimerRestoreService timerRestoreService;
 
@@ -49,9 +49,29 @@ public class TimerRestoreResource {
 		try {
 			logger.info("Setting timer as triggered for process instance "
 					+ piid);
-			timerRestoreService.setAsTriggered(deploymentId, piid);
+			timerRestoreService.setAsTriggered(deploymentId, piid, strategy);
 			responseMsg = "Timer from piid " + piid + " of deployment "
 					+ deploymentId + " succesfull marked as triggered";
+			logger.info(responseMsg);
+			return Response.ok(responseMsg).build();
+		} catch (Exception e) {
+			e.printStackTrace();
+			throw new RuntimeException(e);
+		}
+
+	}
+
+	@POST
+	@Path("cancel")
+	// tested and working
+	public Response cancel(@FormParam("deploymentId") String deploymentId,
+			@FormParam("piid") long piid) {
+		String responseMsg;
+		try {
+			logger.info("Cancelling timer for process instance " + piid);
+			timerRestoreService.cancelTimer(deploymentId, piid, strategy);
+			responseMsg = "Timer from piid " + piid + " of deployment "
+					+ deploymentId + " succesfull cancelled";
 			logger.info(responseMsg);
 			return Response.ok(responseMsg).build();
 		} catch (Exception e) {
@@ -69,10 +89,11 @@ public class TimerRestoreResource {
 			@FormParam("repeatLimit") int repeatLimit) {
 		try {
 			String msg = String
-					.format("Attempt to update timer from process instance id %d with parameters: (delay = %d, period= %d, repeatLimit = %d)", piid, delay, period, repeatLimit);
+					.format("Attempt to update timer from process instance id %d with parameters: (delay = %d, period= %d, repeatLimit = %d)",
+							piid, delay, period, repeatLimit);
 			logger.info(msg);
-			timerRestoreService.updateTimerNode(piid, deploymentId, delay, period,
-					repeatLimit);
+			timerRestoreService.updateTimerNode(piid, deploymentId, delay,
+					period, repeatLimit);
 			return Response.ok("Timer successfully updated").build();
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -86,6 +107,7 @@ public class TimerRestoreResource {
 	@Path("restore")
 	public Response update(@FormParam("piid") Long piid,
 			@FormParam("deploymentId") String deploymentId) {
+		// TODO: Implement
 		return Response.ok("Timer successfully restored").build();
 	}
 

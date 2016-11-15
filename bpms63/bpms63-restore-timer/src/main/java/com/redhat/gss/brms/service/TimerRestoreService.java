@@ -6,9 +6,13 @@ import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
-import org.apache.http.entity.StringEntity;
+import org.drools.core.command.impl.CommandBasedStatefulKnowledgeSession;
+import org.drools.core.command.impl.KnowledgeCommandContext;
+import org.drools.core.impl.StatefulKnowledgeSessionImpl;
 import org.jbpm.kie.services.impl.KModuleDeploymentUnit;
+import org.jbpm.process.instance.InternalProcessRuntime;
 import org.jbpm.process.instance.command.UpdateTimerCommand;
+import org.jbpm.process.instance.timer.TimerManager;
 import org.jbpm.services.api.model.DeploymentUnit;
 import org.jbpm.services.ejb.api.DeploymentServiceEJBLocal;
 import org.jbpm.workflow.instance.WorkflowProcessInstance;
@@ -29,13 +33,28 @@ public class TimerRestoreService {
 
 	private RuntimeStrategy strategy;
 
-	public void setAsTriggered(String deploymentId, long piid) {
+	private RuntimeManager runtimeManager;
+
+	public void setAsTriggered(String deploymentId, long piid, RuntimeStrategy strategy) {
+		this.strategy = strategy;
 		RuntimeEngine runtimeEngine = getRuntimeEngine(deploymentId, piid);
 		KieSession kSession = runtimeEngine.getKieSession();
 		WorkflowProcessInstance pi = (WorkflowProcessInstance) kSession
 				.getProcessInstance(piid);
 		TimerNodeInstance oldTimerInstance = getTimerInstance(pi);
 		oldTimerInstance.triggerCompleted(true);
+		dispose(deploymentId, runtimeEngine);
+	}
+	
+	public void cancelTimer(String deploymentId, long piid, RuntimeStrategy strategy) {
+		this.strategy = strategy;
+		RuntimeEngine runtimeEngine = getRuntimeEngine(deploymentId, piid);
+		KieSession kSession = runtimeEngine.getKieSession();
+		WorkflowProcessInstance pi = (WorkflowProcessInstance) kSession
+				.getProcessInstance(piid);
+		TimerNodeInstance timerInstance = getTimerInstance(pi);
+		TimerManager tm = getTimerManager(kSession);
+		tm.cancelTimer(timerInstance.getId());
 		dispose(deploymentId, runtimeEngine);
 	}
 
@@ -51,7 +70,31 @@ public class TimerRestoreService {
 		kSession.execute(cmd);
 		dispose(deploymentId, runtimeEngine);
 	}
+	
 
+	public RuntimeEngine getRuntimeEngine(String deploymentId, Long piid) {
+		runtimeManager = getRuntimeManager(deploymentId);
+		RuntimeEngine runtimeEngine = null;
+		if (strategy == RuntimeStrategy.PER_PROCESS_INSTANCE) {
+			runtimeEngine = runtimeManager
+					.getRuntimeEngine(ProcessInstanceIdContext.get(piid));
+		} else {
+			strategy = RuntimeStrategy.SINGLETON;
+			runtimeEngine = runtimeManager.getRuntimeEngine(EmptyContext.get());
+		}
+		return runtimeEngine;
+	}
+	
+	private static TimerManager getTimerManager(KieSession ksession) {
+		KieSession internal = ksession;
+		if (ksession instanceof CommandBasedStatefulKnowledgeSession) {
+			internal = ((KnowledgeCommandContext) ((CommandBasedStatefulKnowledgeSession) ksession)
+					.getCommandService().getContext()).getKieSession();
+		}
+		return ((InternalProcessRuntime) ((StatefulKnowledgeSessionImpl) internal)
+				.getProcessRuntime()).getTimerManager();
+	}
+	
 	private TimerNodeInstance getTimerInstance(WorkflowProcessInstance pi) {
 		TimerNodeInstance oldTimerInstance = null;
 		for (NodeInstance n : pi.getNodeInstances()) {
@@ -67,23 +110,8 @@ public class TimerRestoreService {
 		return oldTimerInstance;
 	}
 
-	public RuntimeEngine getRuntimeEngine(String deploymentId, Long piid) {
-		RuntimeManager runtimeManager = getRuntimeManager(deploymentId);
-		RuntimeEngine runtimeEngine = null;
-		if (strategy == RuntimeStrategy.PER_PROCESS_INSTANCE) {
-			runtimeEngine = runtimeManager
-					.getRuntimeEngine(ProcessInstanceIdContext.get(piid));
-		} else {
-			runtimeEngine = runtimeManager.getRuntimeEngine(EmptyContext.get());
-		}
-		return runtimeEngine;
-	}
-
 	public void dispose(String deploymentId, RuntimeEngine runtimeEngine) {
-		RuntimeManager runtimeManager = getRuntimeManager(deploymentId);
-		if (strategy != null && strategy == RuntimeStrategy.SINGLETON) {
-			runtimeManager.disposeRuntimeEngine(runtimeEngine);
-		}
+		runtimeManager.disposeRuntimeEngine(runtimeEngine);
 	}
 
 	private RuntimeManager getRuntimeManager(String deploymentId) {
