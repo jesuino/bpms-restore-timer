@@ -6,6 +6,7 @@ import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
+import org.apache.http.entity.StringEntity;
 import org.jbpm.kie.services.impl.KModuleDeploymentUnit;
 import org.jbpm.process.instance.command.UpdateTimerCommand;
 import org.jbpm.services.api.model.DeploymentUnit;
