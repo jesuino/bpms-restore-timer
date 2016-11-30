@@ -1,4 +1,4 @@
-# bpms603-restore-timer
+# BPM Suite 6.3 Restore Timer
 
 A BPM Suite 6.3 app to restore processes stalled in timer nodes (or modify the timer values)
 
